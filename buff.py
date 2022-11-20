@@ -5,12 +5,12 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 
-
-chrome_path = r'/usr/local/bin/chromedriver' #path from 'which chromedriver'
-
+#for mac
+#chrome_path = r'/usr/local/bin/chromedriver' #path from 'which chromedriver'
+chrome_path = r'./chromedriver' #path from 'which chromedriver'
 
 options = ChromeOptions()
-options.add_extension('/Users/duwanbassani/Buff-Utility.crx')
+options.add_extension('./Buff-Utility.crx')
 options.headless = True
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 #driver = webdriver.Chrome(executable_path=chrome_path, options=options) 

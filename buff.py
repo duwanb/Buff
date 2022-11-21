@@ -1,66 +1,65 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options as ChromeOptions
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+import requests
+#import lxml.html as lh
+#import pandas as pd
+#import re
+import json
+import schedule
 import time
 
-#for mac
-#chrome_path = r'/usr/local/bin/chromedriver' #path from 'which chromedriver'
-chrome_path = r'./chromedriver' #path from 'which chromedriver'
+def job(val, vallucro):
+    url = 'https://buff.163.com/api/market/goods?game=csgo&page_num=1&use_suggestion=0&trigger=undefined_trigger&_=1668989390067'
+    #cookies = {'session': '1-VoG4H_hshS37D62GV1wg-jY9EMfLTCPlOTopkS_b3AU62036009090'}
+    getBuffItems = requests.get(url)
+    y = json.loads(getBuffItems.text)
+    data = y['data']
+    items = data['items']
+    filter = '?from=market#tab=selling&sort_by=default'
+    with open('proibidas.txt', 'r') as f:
+        proibidas = [line.strip() for line in f]
 
-options = ChromeOptions()
-options.add_extension('./Buff-Utility.crx')
-#options.headless = True
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-#driver = webdriver.Chrome(executable_path=chrome_path, options=options) 
-# url of google news website
-url = 'https://buff.163.com/market/csgo#tab=selling&page_num=1'
+    for item in items:
+        ordem = float(item['buy_max_price'])
+        min = float(item['sell_min_price'])
+
+        url = 'https://buff.163.com/goods/' + str(item['id']) + filter
+        afterfee=min*(0.975)
+        if ordem == 0.0:
+            break
+        else:
+            lucro=round(((afterfee-ordem))/(ordem)*100,2)
+            lucrostr=str(lucro)
+            tudo = lucrostr+" | "+ item['market_hash_name'] +" | " + item['buy_max_price']+" | " + item['sell_min_price']
+            nome = item['market_hash_name']
+            achou = False
+            for a in proibidas:
+                if (nome.find(a) != -1):
+                    achou = True
+                    break
+            if achou != True:              
+                if (min >= val ):
+                    if (round(lucro,2)>= vallucro):
+                        requests.post("https://ntfy.sh/LaionViado",
+                        data=tudo.encode('utf-8'),
+                        headers={
+                        "Click": url
+                        })
+                        print(round(lucro,2),' | ', item['market_hash_name'], item['buy_max_price'], '|', item['sell_min_price'],  '|', url)
+
+val = input("Digite o minimo: ")
+vallucro = input("Digite o lucro: ")
+
+val = int(val)
+vallucro = float(vallucro)
+
+schedule.every(10).seconds.do(lambda: job(val, vallucro))
 
 
-listanome=[]
-listapreco=[]
-listacompleta=[]
-
-
-# to open the url in the browser
-driver.get(url)  
-items = driver.find_elements(By.CLASS_NAME, "market-card")
-html = driver.page_source
-
-time.sleep(5)
+while True:
+    schedule.run_pending()
+    time.sleep(1)
 
 
 
-for a in items:
-    filter = a.find_elements(By.TAG_NAME, "li")
-    for b in filter:
-        nomes = a.find_elements(By.TAG_NAME, "h3")
-        precos = a.find_elements(By.TAG_NAME, "strong")
 
-for a in nomes:
-    precomenor = a.find_elements(By.TAG_NAME, "span")
-        #precos = a.find_elements(By.CSS_SELECTOR, "grid-column")
-        #<span style="color: #eea20e;font-weight: 700;"
-for a in nomes:
-    listanome.append(a.text)
 
-for a in precos:
-    listapreco.append(a.text)
 
-len = len(listanome)
-aux = 0
-
-while(aux < len):
-    str = (listanome[aux]+ ";" + listapreco[aux])
-    listacompleta.append(str)
-    aux = aux+ 1
-
-print("\n\n\n\n\n")
-for a in listacompleta:
-    print(a)
-
-with open('./html.txt', 'w') as f:
-    f.write(html)
-    
-driver.quit()
